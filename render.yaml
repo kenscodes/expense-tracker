@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: expense-tracker
+    runtime: go
+    buildCommand: cd backend && go build -o server .
+    startCommand: cd backend && ./server
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: FRONTEND_DIR
+        value: "../frontend"
+      - key: CGO_ENABLED
+        value: "1"
