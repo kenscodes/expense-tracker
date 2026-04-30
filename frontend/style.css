@@ -91,6 +91,11 @@ html {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Ensure hidden attribute always works, even when CSS sets display explicitly */
+[hidden] {
+    display: none !important;
+}
+
 body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
