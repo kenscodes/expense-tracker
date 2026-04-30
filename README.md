@@ -41,43 +41,42 @@ expense-tracker/
 
 ---
 
-## Key Design Decisions
+## What Matters for Production (Design Justifications)
 
-### Money Handling — Integer Paise
-Amounts are stored as **integer paise** (1 INR = 100 paise). For example, ₹150.50 is stored as `15050`. This eliminates floating-point precision errors that are critical in financial applications. The conversion happens at the API boundary — the frontend sends decimal values, the backend converts and stores as integers.
+As per the assignment requirements, this project prioritizes **data correctness, resilience under network unreliability, and code clarity** over feature breadth. 
 
-### Idempotency for Safe Retries
-Each form submission generates a **UUID v4 idempotency key** sent via the `Idempotency-Key` HTTP header. The backend stores these keys in a dedicated table and checks them **within a database transaction** before inserting. This means:
-- **Double-clicks** → same key → only one expense created
-- **Network retries** → same key → returns existing record (HTTP 200 vs 201)
-- **Page refresh after submit** → key is cleared on success, new key on new data
+### 1. Robust Money Handling
+Floating-point math in Javascript/Go can cause massive bugs (e.g. `0.1 + 0.2 = 0.30000000000000004`). To achieve true production-readiness, money is passed to the backend, immediately converted to **integer paise** (cents), and exclusively stored and calculated in the database as integers. It is only converted back to strings for display at the very edge of the API.
 
-### SQLite with WAL Mode
-Chosen for zero-config deployment and ACID guarantees. WAL (Write-Ahead Logging) mode enables concurrent reads during writes. Indexes on `category` and `date` columns ensure fast filtering and sorting.
+### 2. Idempotency & Realistic Network Conditions
+The prompt specifically required the system to handle: *unreliable networks, browser refreshes, retries, and double clicks.* 
+- Every form submission dynamically generates a `UUIDv4` idempotency key.
+- The Go backend verifies this key inside an ACID database transaction.
+- If a user loses connection and aggressively clicks the submit button 5 times, the UI handles the loading state natively, and if 5 identical requests somehow reach the backend, the database safely drops duplicates and returns a `200 OK` (instead of `201 Created`) without crashing.
 
-### Frontend Architecture
-Vanilla HTML/CSS/JS with no build step — intentional simplicity. The dark glassmorphism design uses CSS custom properties for a consistent design system. State management (loading, error, empty, data) is explicit and covers all realistic user scenarios.
+### 3. Graceful UI States
+Instead of assuming happy paths, the vanilla JS frontend explicitly manages `loading`, `error`, `empty`, and `data` states. If the server is unreachable, the user sees a specific error state with a "Retry" button rather than a silently broken page.
+
+### 4. SQLite with WAL Mode
+SQLite provides rock-solid ACID compliance with zero configuration burden for reviewing. However, to make it behave like a production database under load, `_journal_mode=WAL` (Write-Ahead Logging) is enabled upon initialization. This prevents write operations (adding an expense) from blocking read operations (listing expenses).
 
 ---
 
-## Trade-offs (Due to Timebox)
+## Trade-offs Made Because of the Timebox
 
-| Decision | Trade-off |
-|----------|-----------|
-| **SQLite** | Not horizontally scalable. For production at scale, PostgreSQL with a cloud-managed service would be appropriate. |
-| **In-process storage** | On Render free tier, the filesystem is ephemeral — data resets on redeploy. A managed database would solve this. |
-| **No authentication** | Single-user tool. Multi-user would need auth + user-scoped data. |
-| **No pagination** | Acceptable for personal use (<1000 expenses). Would add cursor-based pagination for larger datasets. |
-| **No edit/delete** | Focused on the core CRUD subset specified. Easy to add with similar patterns. |
+| Decision | Why? | How to upgrade for production |
+|----------|-----------|------------------|
+| **SQLite on ephemeral disk** | Allows reviewers to test locally without installing Docker or PostgreSQL. However, on free-tier platforms like Render, local disk gets wiped on redeploy. | Migrate to a managed PostgreSQL cluster (e.g., Supabase/RDS) by swapping out the `go-sqlite3` driver. The `store` interface makes this trivial. |
+| **No Pagination** | Building robust cursor-based pagination both in the DB query and the frontend Javascript adds significant scope. Given the personal nature of the tool, returning all rows is acceptable for testing. | Add `cursor` and `limit` query parameters to the API, and a "Load More" button to the UI. |
+| **No Automated Frontend testing** | Timebox focused on edge-case testing in the backend (where the business logic lives) and manually verifying the UI flows. | Add Cypress or Playwright to run end-to-end tests validating the DOM states and idempotency behavior. |
 
 ---
 
 ## What I Intentionally Did Not Do
 
-- **No ORM** — Direct SQL is more transparent for the small schema and avoids the "ORM tax" of debugging generated queries.
-- **No SPA framework** — Vanilla JS avoids build complexity and keeps the frontend deployable as static files.
-- **No WebSocket/SSE** — Polling on page load is sufficient for a single-user tool.
-- **No rate limiting** — Would add for production (middleware-based, per-IP).
+- **Over-engineer with React/Next.js:** A simple CRUD tool doesn't require a virtual DOM or complex build pipelines. Vanilla HTML/CSS/JS demonstrates fundamental DOM manipulation and state management cleanly, keeping the repository incredibly small.
+- **Use an ORM (e.g. GORM):** The schema is a single table and an idempotency table. Using direct SQL queries with standard library bindings avoids the "ORM tax" and makes performance profiling far easier.
+- **Implement Edit/Delete:** The core assignment specified *recording* and *reviewing*. Skipping edit/delete allowed me to invest heavily into idempotency and money-handling edge cases instead.
 
 ---
 

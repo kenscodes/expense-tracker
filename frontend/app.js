@@ -8,16 +8,12 @@
  * - Graceful error handling with retry support
  */
 
-// ============================================
 // Configuration
-// ============================================
 
 const API_BASE = window.location.origin;
 const CATEGORIES = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Healthcare', 'Education', 'Other'];
 
-// ============================================
 // UUID v4 Generator (for idempotency keys)
-// ============================================
 
 function generateUUID() {
     // Use crypto.randomUUID if available, otherwise fallback
@@ -31,9 +27,7 @@ function generateUUID() {
     });
 }
 
-// ============================================
 // DOM Elements
-// ============================================
 
 const elements = {
     form: document.getElementById('expense-form'),
@@ -79,16 +73,12 @@ const elements = {
     summaryList: document.getElementById('summary-list'),
 };
 
-// ============================================
 // State
-// ============================================
 
 let isSubmitting = false;
 let currentIdempotencyKey = null;
 
-// ============================================
 // API Client
-// ============================================
 
 async function apiRequest(method, path, body = null, headers = {}) {
     const url = `${API_BASE}${path}`;
@@ -114,9 +104,7 @@ async function apiRequest(method, path, body = null, headers = {}) {
     return { data, status: response.status };
 }
 
-// ============================================
 // Form Validation
-// ============================================
 
 function clearErrors() {
     elements.amountError.textContent = '';
@@ -170,9 +158,7 @@ function validateForm() {
     return valid;
 }
 
-// ============================================
 // Form Submission
-// ============================================
 
 async function handleSubmit(e) {
     e.preventDefault();
@@ -227,9 +213,7 @@ function setSubmitLoading(loading) {
     elements.btnLoader.hidden = !loading;
 }
 
-// ============================================
 // Toast Notifications
-// ============================================
 
 function showToast(message, type = 'success') {
     elements.toastMessage.textContent = message;
@@ -242,9 +226,7 @@ function showToast(message, type = 'success') {
     }, 4000);
 }
 
-// ============================================
 // Load & Render Expenses
-// ============================================
 
 async function loadExpenses() {
     showState('loading');
@@ -313,9 +295,7 @@ function showState(state, message = '') {
     }
 }
 
-// ============================================
 // Category Filter (Dynamic)
-// ============================================
 
 async function updateFilterCategories() {
     try {
@@ -338,9 +318,7 @@ async function updateFilterCategories() {
     }
 }
 
-// ============================================
 // Category Summary
-// ============================================
 
 async function loadSummary() {
     try {
@@ -386,9 +364,7 @@ function renderSummary(data) {
         .join('');
 }
 
-// ============================================
 // Helpers
-// ============================================
 
 function formatDate(dateStr) {
     const date = new Date(dateStr + 'T00:00:00');
@@ -413,9 +389,7 @@ function setDefaultDate() {
     elements.date.value = `${yyyy}-${mm}-${dd}`;
 }
 
-// ============================================
 // Event Listeners
-// ============================================
 
 elements.form.addEventListener('submit', handleSubmit);
 
@@ -431,9 +405,7 @@ elements.retryBtn.addEventListener('click', loadExpenses);
     });
 });
 
-// ============================================
 // Initialize
-// ============================================
 
 function init() {
     setDefaultDate();

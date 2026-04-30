@@ -74,8 +74,6 @@ func (h *ExpenseHandler) CreateExpense(w http.ResponseWriter, r *http.Request) {
 
 // ListExpenses handles GET /api/expenses.
 // Supports query parameters:
-//   - category: filter by category
-//   - sort: "date_desc" (default) or "date_asc"
 func (h *ExpenseHandler) ListExpenses(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
 	sort := r.URL.Query().Get("sort")
